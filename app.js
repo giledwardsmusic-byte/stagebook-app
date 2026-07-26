@@ -1,40 +1,4 @@
-let STATE = {
-  songs: [],
-  setlists: [],
-  tab: "library",
-  view: "main",
-  backTo: "main",
-  selectedSongId: null,
-  selectedSetlistId: null,
-  editingSong: null,
-  search: "",
-  showSearch: false,
-  quickAddOpen: false,
-  addingSetlistOpen: false,
-  confirm: null,
-  importMsg: "",
-  storageError: false,
-  loaded: false
-};
-
-function uid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-function esc(str) {
-  if (str === null || str === undefined) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function emptySong() {
-  return { id: null, title: "", artist: "", chordUrl: "", youtubeUrl: "", notes: "", needsRehearsal: false, songIdea: false };
-}
-
-/* ---------- data ---------- */
+STATE.songs/* ---------- data ---------- */
 
 async function loadData() {
   try {
