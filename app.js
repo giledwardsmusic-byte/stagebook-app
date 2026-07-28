@@ -473,4 +473,306 @@ function renderRehearse() {
     ? renderEmptyState("Nothing flagged. You're all caught up.")
     : '<ul class="divide-y divide-zinc-800">' + list.map(song =>
         '<li><button data-action="open-detail" data-id="' + song.id + '" data-from="main" class="w-full flex items-center justify-between px-4 py-4 text-left active:bg-zinc-900">' +
-          '<div class="min-w-0">
+          '<div class="min-w-0"><p class="text-lg font-bold text-zinc-100 truncate">' + esc(song.title) + "</p>" +
+          (song.artist ? '<p class="text-sm text-zinc-400 truncate">' + esc(song.artist) + "</p>" : "") + "</div>" +
+          '<span class="text-zinc-600 shrink-0 ml-3">&rsaquo;</span>' +
+        "</button></li>"
+      ).join("") + "</ul>";
+  return '<div class="pb-24 min-h-full">' + inner + "</div>";
+}
+
+function renderSetlists() {
+  const inner = STATE.setlists.length === 0
+    ? renderEmptyState("No setlists yet. Build your first one.")
+    : '<ul class="divide-y divide-zinc-800">' + STATE.setlists.map(sl =>
+        '<li><button data-action="open-setlist" data-id="' + sl.id + '" class="w-full flex items-center justify-between px-4 py-4 text-left active:bg-zinc-900">' +
+          '<div class="min-w-0"><p class="text-lg font-bold text-zinc-100 truncate">' + esc(sl.name) + "</p>" +
+          '<p class="text-sm text-zinc-400">' + sl.songIds.length + " song" + (sl.songIds.length === 1 ? "" : "s") + "</p></div>" +
+          '<span class="text-zinc-600 shrink-0 ml-3">&rsaquo;</span>' +
+        "</button></li>"
+      ).join("") + "</ul>";
+
+  const modal = STATE.addingSetlistOpen ? (
+    '<div class="fixed inset-0 z-50 flex items-end justify-center" style="background-color:rgba(0,0,0,0.65)">' +
+      '<div class="w-full bg-zinc-900 border-t border-zinc-700 rounded-t-2xl p-5 pb-8">' +
+        '<p class="text-sm font-bold uppercase tracking-wide text-amber-400 mb-3">New setlist</p>' +
+        '<input id="new-setlist-input" placeholder="e.g. Main Set, Senior Living, Christmas" autofocus class="w-full bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 mb-5 focus:outline-none focus:ring-2 focus:ring-amber-400" />' +
+        '<div class="flex gap-3">' +
+          '<button data-action="new-setlist-cancel" class="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-200 font-semibold active:bg-zinc-700">Cancel</button>' +
+          '<button data-action="new-setlist-save" class="flex-1 py-3 rounded-xl bg-amber-400 text-black font-semibold active:bg-amber-500">Create</button>' +
+        "</div>" +
+      "</div>" +
+    "</div>"
+  ) : "";
+
+  return (
+    '<div class="pb-24 relative min-h-full">' + inner +
+      '<button data-action="new-setlist-open" class="fixed right-5 bottom-24 w-16 h-16 rounded-full bg-amber-400 active:bg-amber-500 flex items-center justify-center shadow-lg text-3xl text-black" aria-label="New setlist">+</button>' +
+      modal +
+    "</div>"
+  );
+}
+
+function renderDetail() {
+  const song = getSong(STATE.selectedSongId);
+  if (!song) return renderEmptyState("This song was deleted.");
+  const songSetlists = getSongSetlists(song);
+  let html = '<div class="px-5 py-6 pb-10">';
+  html += '<h2 class="text-2xl font-black tracking-wide text-zinc-100 mb-1">' + esc(song.title) + "</h2>";
+  html += song.artist
+    ? '<p class="text-base text-zinc-400 mb-4">' + esc(song.artist) + "</p>"
+    : '<p class="text-base text-zinc-600 mb-4">No artist listed</p>';
+
+  if (songSetlists.length > 0) {
+    html += '<div class="flex flex-wrap gap-2 mb-5">' + songSetlists.map(sl =>
+      '<span class="px-3 py-1 rounded-full bg-zinc-800 border border-zinc-700 text-xs font-semibold text-zinc-300">' + esc(sl.name) + "</span>"
+    ).join("") + "</div>";
+  }
+
+  if (song.needsRehearsal || song.songIdea) {
+    html += '<div class="flex gap-2 mb-6">';
+    if (song.needsRehearsal) html += '<span class="px-3 py-1 rounded-full bg-rose-950 border border-rose-800 text-xs font-semibold text-rose-400">Needs rehearsal</span>';
+    if (song.songIdea) html += '<span class="px-3 py-1 rounded-full bg-teal-950 border border-teal-800 text-xs font-semibold text-teal-400">Song idea</span>';
+    html += "</div>";
+  }
+
+  if (song.notes) {
+    html += '<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 mb-6">' +
+      '<p class="text-xs font-bold uppercase tracking-wide text-zinc-500 mb-2">Notes</p>' +
+      '<p class="text-base text-zinc-200 whitespace-pre-wrap">' + esc(song.notes) + "</p></div>";
+  }
+
+  html += '<div class="flex flex-col gap-3 mt-4">';
+  html += '<button data-action="open-chords" data-id="' + song.id + '" ' + (!hasChords(song) ? "disabled" : "") +
+    ' class="w-full py-4 rounded-xl text-lg font-bold flex items-center justify-center gap-2 ' +
+    (hasChords(song) ? "bg-amber-400 text-black active:bg-amber-500" : "bg-zinc-800 text-zinc-500 opacity-50") + '">' +
+    "<span>&#127928;</span> Open Chords</button>";
+  html += '<button data-action="open-youtube" data-id="' + song.id + '" ' + (!song.youtubeUrl ? "disabled" : "") +
+    ' class="w-full py-4 rounded-xl border text-lg font-bold flex items-center justify-center gap-2 ' +
+    (song.youtubeUrl ? "bg-zinc-800 border-zinc-700 text-zinc-100 active:bg-zinc-700" : "bg-zinc-900 border-zinc-800 text-zinc-600 opacity-50") + '">' +
+    "<span>&#9654;&#65039;</span> Open YouTube</button>";
+  html += '<button data-action="open-edit" data-id="' + song.id + '" data-from="detail" class="w-full py-4 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-lg font-bold active:bg-zinc-700 flex items-center justify-center gap-2"><span>&#9999;&#65039;</span> Edit Song</button>';
+  html += '<button data-action="delete-song" data-id="' + song.id + '" class="w-full py-4 rounded-xl bg-zinc-900 border border-rose-900 text-rose-400 text-lg font-bold active:bg-zinc-800 flex items-center justify-center gap-2"><span>&#128465;&#65039;</span> Delete Song</button>';
+  html += "</div></div>";
+  return html;
+}
+
+function renderChords() {
+  const song = getSong(STATE.selectedSongId);
+  if (!song) return renderEmptyState("This song was deleted.");
+  let html = '<div class="px-5 py-6 pb-10">';
+  html += '<h2 class="text-xl font-black tracking-wide text-zinc-100 mb-1">' + esc(song.title) + "</h2>";
+  if (song.artist) html += '<p class="text-sm text-zinc-400 mb-5">' + esc(song.artist) + "</p>";
+
+  if (song.chordChart && song.chordChart.trim()) {
+    html += '<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 overflow-x-auto mb-5">' +
+      '<pre class="font-mono text-sm text-amber-300 whitespace-pre leading-relaxed">' + esc(song.chordChart) + "</pre></div>";
+  } else {
+    html += renderEmptyState("No typed chart for this song yet. Add one from the edit screen.");
+  }
+
+  if (song.chordUrl) {
+    html += '<button data-action="open-chord-link" data-id="' + song.id + '" class="w-full py-4 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-base font-bold active:bg-zinc-700 mb-3 flex items-center justify-center gap-2"><span>&#128279;</span> Open Saved Chord Link</button>';
+  }
+  html += '<button data-action="open-edit" data-id="' + song.id + '" data-from="chords" class="w-full py-4 rounded-xl bg-amber-400 text-black text-base font-bold active:bg-amber-500 flex items-center justify-center gap-2"><span>&#9999;&#65039;</span> Edit Chart</button>';
+
+  html += "</div>";
+  return html;
+}
+
+function field(label, id, value, placeholder) {
+  return '<label class="block mb-4"><span class="text-xs font-bold uppercase tracking-wide text-zinc-500">' + label + "</span>" +
+    '<input id="' + id + '" value="' + esc(value) + '" placeholder="' + esc(placeholder) + '" class="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400" /></label>';
+}
+
+function flagButton(flag, label, checked, color) {
+  return '<button type="button" id="flag-' + flag + '" data-action="toggle-flag" data-flag="' + flag + '" class="w-full flex items-center justify-between px-4 py-3 rounded-xl border ' +
+    (checked ? "bg-" + color + "-950 border-" + color + "-700" : "bg-zinc-900 border-zinc-700") + '">' +
+    '<span class="text-base text-zinc-100">' + label + "</span>" +
+    '<span class="flag-dot w-6 h-6 rounded-full border-2 flex items-center justify-center ' +
+      (checked ? "bg-" + color + "-500 border-" + color + "-500" : "border-zinc-600") + '">' +
+      (checked ? '<span class="text-black text-sm font-bold">&#10003;</span>' : "") +
+    "</span></button>";
+}
+
+function renderEdit() {
+  const s = STATE.editingSong;
+  if (!s) return "";
+  let html = '<div class="px-5 py-5 pb-16">';
+
+  html += field("Song Title *", "song-title-input", s.title, "Song title");
+  html += field("Artist", "song-artist-input", s.artist, "Artist");
+  html += field("Chord URL", "song-chord-input", s.chordUrl, "https://...");
+
+  html += '<label class="block mb-5">' +
+    '<span class="text-xs font-bold uppercase tracking-wide text-zinc-500">My Chord Chart</span>' +
+    '<span class="block text-xs text-zinc-500 mt-1 mb-2">Can&rsquo;t find this one online? Type the chords above the lyric lines yourself.</span>' +
+    '<textarea id="song-chordchart-input" rows="8" placeholder="G          D           Em&#10;Amazing grace, how sweet the sound" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm font-mono text-amber-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-amber-400">' + esc(s.chordChart) + "</textarea></label>";
+
+  html += field("YouTube URL", "song-youtube-input", s.youtubeUrl, "https://...");
+
+  html += '<label class="block mb-5"><span class="text-xs font-bold uppercase tracking-wide text-zinc-500">Notes</span>' +
+    '<textarea id="song-notes-input" rows="4" placeholder="Key changes, tempo, reminders..." class="w-full mt-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-base text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-400">' + esc(s.notes) + "</textarea></label>";
+
+  html += '<div class="mb-5"><span class="text-xs font-bold uppercase tracking-wide text-zinc-500 block mb-2">Setlists</span>';
+  if (STATE.setlists.length === 0) {
+    html += '<p class="text-sm text-zinc-500">No setlists yet. Create one from the Setlists tab.</p>';
+  } else {
+    html += '<div class="flex flex-col gap-2">';
+    STATE.setlists.forEach(sl => {
+      const checked = s.id ? sl.songIds.includes(s.id) : false;
+      html += '<button type="button" id="setlist-chip-' + sl.id + '" ' + (!s.id ? "disabled" : "") +
+        ' data-action="toggle-edit-setlist" data-id="' + sl.id + '"' +
+        ' class="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-left ' +
+        (checked ? "bg-amber-950 border-amber-700" : "bg-zinc-900 border-zinc-700") + (!s.id ? " opacity-40" : "") + '">' +
+        '<span class="text-base text-zinc-100">' + esc(sl.name) + "</span>" +
+        '<span class="chip-check">' + (checked ? '<span class="text-amber-400">&#10003;</span>' : "") + "</span>" +
+      "</button>";
+    });
+    html += "</div>";
+  }
+  if (!s.id && STATE.setlists.length > 0) {
+    html += '<p class="text-xs text-zinc-500 mt-2">Save this song first, then add it to setlists.</p>';
+  }
+  html += "</div>";
+
+  html += '<div class="flex flex-col gap-3 mb-6">';
+  html += flagButton("needsRehearsal", "Needs rehearsal", s.needsRehearsal, "rose");
+  html += flagButton("songIdea", "Song idea", s.songIdea, "teal");
+  html += "</div>";
+
+  html += '<p id="title-error" class="text-sm text-rose-400 mb-3 hidden">Song title is required before you can save.</p>';
+  html += '<button data-action="save-song" class="w-full py-4 rounded-xl bg-amber-400 text-black text-lg font-bold active:bg-amber-500">Save Song</button>';
+
+  html += "</div>";
+  return html;
+}
+
+function renderSetlistDetail() {
+  const sl = STATE.setlists.find(x => x.id === STATE.selectedSetlistId);
+  if (!sl) return renderEmptyState("This setlist was deleted.");
+  const orderedSongs = sl.songIds.map(id => getSong(id)).filter(Boolean);
+  let html = '<div class="pb-28">';
+  html += '<div class="px-5 pt-5 pb-2 flex items-center justify-between">' +
+    '<p class="text-sm text-zinc-500">' + orderedSongs.length + " song" + (orderedSongs.length === 1 ? "" : "s") + "</p>" +
+    '<button data-action="delete-setlist" data-id="' + sl.id + '" class="text-sm font-semibold text-rose-400 active:opacity-70">Delete setlist</button>' +
+  "</div>";
+
+  if (orderedSongs.length === 0) {
+    html += renderEmptyState("No songs in this setlist yet.");
+  } else {
+    html += '<ul class="divide-y divide-zinc-800 mt-2">';
+    orderedSongs.forEach((song, idx) => {
+      html += '<li class="flex items-center px-4 py-3 gap-3">' +
+        '<div class="flex flex-col gap-1">' +
+          '<button data-action="move-song" data-setlist="' + sl.id + '" data-song="' + song.id + '" data-dir="-1" ' + (idx === 0 ? "disabled" : "") + ' class="p-1 rounded active:bg-zinc-800 text-zinc-400 ' + (idx === 0 ? "opacity-20" : "") + '">&#9650;</button>' +
+          '<button data-action="move-song" data-setlist="' + sl.id + '" data-song="' + song.id + '" data-dir="1" ' + (idx === orderedSongs.length - 1 ? "disabled" : "") + ' class="p-1 rounded active:bg-zinc-800 text-zinc-400 ' + (idx === orderedSongs.length - 1 ? "opacity-20" : "") + '">&#9660;</button>' +
+        "</div>" +
+        '<button data-action="open-detail" data-id="' + song.id + '" data-from="setlistDetail" class="flex-1 min-w-0 text-left">' +
+          '<p class="text-base font-bold text-zinc-100 truncate">' + (idx + 1) + ". " + esc(song.title) + "</p>" +
+          (song.artist ? '<p class="text-sm text-zinc-400 truncate">' + esc(song.artist) + "</p>" : "") +
+        "</button>" +
+        '<button data-action="remove-from-setlist" data-setlist="' + sl.id + '" data-song="' + song.id + '" class="p-2 rounded-full active:bg-zinc-800 text-zinc-500">&#10005;</button>' +
+      "</li>";
+    });
+    html += "</ul>";
+  }
+
+  html += '<div class="px-5 mt-5"><button data-action="open-picker" class="w-full py-4 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-base font-bold active:bg-zinc-700">+ Add Songs</button></div>';
+  html += "</div>";
+  return html;
+}
+
+function renderSetlistPicker() {
+  const sl = STATE.setlists.find(x => x.id === STATE.selectedSetlistId);
+  if (!sl) return "";
+  const notIn = STATE.songs.filter(s => !sl.songIds.includes(s.id)).sort((a, b) => a.title.localeCompare(b.title));
+  let html = '<div class="pb-10">';
+  if (notIn.length === 0) {
+    html += renderEmptyState("Every song is already in this setlist.");
+  } else {
+    html += '<ul class="divide-y divide-zinc-800">' + notIn.map(song =>
+      '<li><button data-action="picker-add" data-setlist="' + sl.id + '" data-song="' + song.id + '" class="w-full flex items-center justify-between px-4 py-4 text-left active:bg-zinc-900">' +
+        '<div class="min-w-0"><p class="text-base font-bold text-zinc-100 truncate">' + esc(song.title) + "</p>" +
+        (song.artist ? '<p class="text-sm text-zinc-400 truncate">' + esc(song.artist) + "</p>" : "") + "</div>" +
+        '<span class="text-amber-400 shrink-0 ml-3 text-xl">+</span>' +
+      "</button></li>"
+    ).join("") + "</ul>";
+  }
+  html += '<div class="px-5 mt-5"><button data-action="picker-done" class="w-full py-4 rounded-xl bg-amber-400 text-black text-base font-bold active:bg-amber-500">Done</button></div>';
+  html += "</div>";
+  return html;
+}
+
+function renderData() {
+  let html = '<div class="px-5 py-6">';
+  html += '<p class="text-sm text-zinc-400 mb-6 leading-relaxed">StageBook saves everything to the cloud automatically, so it stays in sync across your phone and any other device. Export a backup any time, or import one to restore your songs and setlists.</p>';
+  html += '<button data-action="export" class="w-full py-4 rounded-xl bg-amber-400 text-black text-base font-bold active:bg-amber-500 flex items-center justify-center gap-2 mb-3"><span>&#11015;&#65039;</span> Export Backup</button>';
+  html += '<button data-action="import-click" class="w-full py-4 rounded-xl bg-zinc-800 border border-zinc-700 text-zinc-100 text-base font-bold active:bg-zinc-700 flex items-center justify-center gap-2"><span>&#11014;&#65039;</span> Import Backup</button>';
+  html += '<input id="import-file-input" type="file" accept="application/json" class="hidden" onchange="handleImportFile(this)" />';
+  if (STATE.importMsg) html += '<p class="text-sm text-zinc-400 mt-4">' + esc(STATE.importMsg) + "</p>";
+  if (STATE.storageError) html += '<p class="text-sm text-rose-400 mt-4">There was a problem reaching the server. Changes may not have saved &mdash; check your connection and try again.</p>';
+  html += '<div class="mt-8 pt-6 border-t border-zinc-800"><p class="text-xs text-zinc-600">' + STATE.songs.length + " songs &middot; " + STATE.setlists.length + " setlists</p></div>";
+  html += "</div>";
+  return html;
+}
+
+/* ---------- events ---------- */
+
+function handleClick(e) {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const action = btn.getAttribute("data-action");
+
+  if (action === "goto-tab") { goTab(btn.getAttribute("data-tab")); return; }
+  if (action === "toggle-search") { STATE.showSearch = !STATE.showSearch; render(); return; }
+  if (action === "open-data") { STATE.backTo = "main"; STATE.view = "data"; render(); return; }
+  if (action === "back") {
+    if (STATE.view === "detail") closeDetail();
+    else if (STATE.view === "setlistPicker") { STATE.view = "setlistDetail"; render(); }
+    else { STATE.view = STATE.backTo; render(); }
+    return;
+  }
+  if (action === "open-detail") { openDetail(btn.getAttribute("data-id"), btn.getAttribute("data-from")); return; }
+  if (action === "open-edit") {
+    const id = btn.getAttribute("data-id");
+    const from = btn.getAttribute("data-from");
+    openEdit(id ? getSong(id) : null, from);
+    return;
+  }
+  if (action === "save-song") { handleSaveSong(); return; }
+  if (action === "delete-song") { deleteSong(btn.getAttribute("data-id")); return; }
+  if (action === "open-chords") {
+    const s = getSong(btn.getAttribute("data-id"));
+    if (!s) return;
+    if (s.chordChart && s.chordChart.trim()) { openChords(s.id, "detail"); }
+    else if (s.chordUrl) { window.open(s.chordUrl, "_blank"); }
+    return;
+  }
+  if (action === "open-chord-link") { const s = getSong(btn.getAttribute("data-id")); if (s && s.chordUrl) window.open(s.chordUrl, "_blank"); return; }
+  if (action === "open-youtube") { const s = getSong(btn.getAttribute("data-id")); if (s && s.youtubeUrl) window.open(s.youtubeUrl, "_blank"); return; }
+  if (action === "toggle-flag") { toggleEditFlag(btn.getAttribute("data-flag")); return; }
+  if (action === "toggle-edit-setlist") { toggleEditSetlistMembership(btn.getAttribute("data-id")); return; }
+  if (action === "quick-add-open") { STATE.quickAddOpen = true; render(); return; }
+  if (action === "quick-add-cancel") { STATE.quickAddOpen = false; render(); return; }
+  if (action === "quick-add-save") { quickAddSave(); return; }
+  if (action === "new-setlist-open") { STATE.addingSetlistOpen = true; render(); return; }
+  if (action === "new-setlist-cancel") { STATE.addingSetlistOpen = false; render(); return; }
+  if (action === "new-setlist-save") { createSetlist(); return; }
+  if (action === "open-setlist") { STATE.selectedSetlistId = btn.getAttribute("data-id"); STATE.backTo = "main"; STATE.view = "setlistDetail"; render(); return; }
+  if (action === "delete-setlist") { deleteSetlist(btn.getAttribute("data-id")); return; }
+  if (action === "move-song") { moveSongInSetlist(btn.getAttribute("data-setlist"), btn.getAttribute("data-song"), parseInt(btn.getAttribute("data-dir"), 10)); render(); return; }
+  if (action === "remove-from-setlist") { toggleSongInSetlist(btn.getAttribute("data-setlist"), btn.getAttribute("data-song")); render(); return; }
+  if (action === "open-picker") { STATE.view = "setlistPicker"; render(); return; }
+  if (action === "picker-add") { toggleSongInSetlist(btn.getAttribute("data-setlist"), btn.getAttribute("data-song")); render(); return; }
+  if (action === "picker-done") { STATE.view = "setlistDetail"; render(); return; }
+  if (action === "export") { handleExport(); return; }
+  if (action === "import-click") { document.getElementById("import-file-input").click(); return; }
+  if (action === "confirm-cancel") { STATE.confirm = null; render(); return; }
+  if (action === "confirm-yes") { STATE.confirm.onConfirm(); return; }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  document.getElementById("app").addEventListener("click", handleClick);
+  loadData();
+});
