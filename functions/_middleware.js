@@ -2,7 +2,7 @@ export async function onRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
 
-  const publicPaths = ["/login.html", "/api/login"];
+  const publicPaths = ["/login", "/login.html", "/api/login"];
   if (publicPaths.includes(url.pathname) || url.pathname.startsWith("/assets")) {
     return next();
   }
@@ -12,7 +12,7 @@ export async function onRequest(context) {
   const token = match ? match[1] : null;
 
   if (!token) {
-    return Response.redirect(url.origin + "/login.html", 302);
+    return Response.redirect(url.origin + "/login", 302);
   }
 
   const session = await env.DB.prepare(
@@ -20,7 +20,7 @@ export async function onRequest(context) {
   ).bind(token).first();
 
   if (!session || session.active !== 1) {
-    return Response.redirect(url.origin + "/login.html", 302);
+    return Response.redirect(url.origin + "/login", 302);
   }
 
   return next();
